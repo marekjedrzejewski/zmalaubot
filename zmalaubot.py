@@ -5,6 +5,7 @@ from urllib import request
 import json
 from matrix_client.client import MatrixClient
 import sys
+import time
 
 SUPPORTED_FIAT = ['USD', 'EUR', 'PLN']
 DEFAULT_FIAT = 'USD'
@@ -80,14 +81,12 @@ class ZmalauBot():
                 status += f' zmiana: {change:.4f}%'
             for fiat in used_fiat:
                 status += '\n1 {crypto} = {amount} {currency} '.format(crypto=crypto,
-                                                                      amount=current_price[fiat],
-                                                                      currency=fiat)
+                                                                       amount=current_price[fiat],
+                                                                       currency=fiat)
                 self.last_price[crypto] = current_price
             self.room.send_text(status)
 
 
 zmalaubot = ZmalauBot(username, password, roomname)
 while True:
-    msg = input()
-    if msg == "/quit":
-        break
+    time.sleep(1)
