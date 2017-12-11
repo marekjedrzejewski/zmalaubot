@@ -1,5 +1,7 @@
 #!/bin/python3
 
+from urllib import request
+import json
 from matrix_client.client import MatrixClient
 import sys
 
@@ -11,6 +13,10 @@ username = sys.argv[1]
 password = sys.argv[2]
 roomname = sys.argv[3]
 
+def check_current_price():
+    return json.load(request.urlopen("https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,EUR"))
+
+last_price = check_current_price()
 
 client = MatrixClient("http://matrix.org")
 
@@ -25,10 +31,19 @@ def on_message(room, event):
             return
         if event['content']['msgtype'] == "m.text":
             message = event['content']['body']
-            if 'zmalau' in message:
-                room.send_text('urus')
-            if 'urus' in message:
-                room.send_text('zmalau')
+            if 'zmalau' in message or 'urus' in message:
+                current_price = check_current_price()
+                change = current_price['USD'] / last_price['USD'] - 1
+                if change > 0:
+                    status = 'urus'
+                elif current_price['USD'] < last_price['USD']:
+                    status = 'zmalau'
+                else:
+                    status = 'stoi'
+                room.send_text('{status}. zmiana: {change:.4f}%, cena: {usd}USD'
+                        .format(status=status,
+                                change=change*100,
+                                usd=current_price['USD']))
 
 
 room.add_listener(on_message)
