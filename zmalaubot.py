@@ -26,6 +26,7 @@ room = client.join_room(roomname)
 
 
 def on_message(room, event):
+    global last_price
     if event['type'] == "m.room.message":
         if username in event['sender']:
             return
@@ -44,6 +45,7 @@ def on_message(room, event):
                         .format(status=status,
                                 change=change*100,
                                 usd=current_price['USD']))
+                last_price = current_price
 
 
 room.add_listener(on_message)
