@@ -1,32 +1,33 @@
 #!/usr/bin/python3
 
 # ₿Ξ
+import sys
+import time
 from urllib import request
 import json
 from matrix_client.client import MatrixClient
-import sys
-import time
 
 SUPPORTED_FIAT = ['USD', 'EUR', 'PLN']
 DEFAULT_FIAT = 'USD'
-SUPPORTED_CRYPTO = ['BTC', 'ETH']
+SUPPORTED_CRYPTO = ['BTC', 'ETH', 'LTC', 'IOT', 'DOGE', 'BCH', 
+                    'XRP', 'DASH', 'XMR', 'EOS', 'NEO', 'OMG',
+                    'LSK', 'ZEC', 'NXT', 'ARDR', 'GNT' ]
 DEFAULT_CRYPTO = 'BTC'
 
 if len(sys.argv) != 4:
     print("USAGE: ./zmalaubot.py username password room")
     sys.exit(1)
 
-username = sys.argv[1]
-password = sys.argv[2]
-roomname = sys.argv[3]
+USERNAME = sys.argv[1]
+PASSWORD = sys.argv[2]
+ROOMNAME = sys.argv[3]
 
 
 class ZmalauBot():
     def __init__(self, username, password, roomname):
         # init all cryptos on start
         self.last_price = {}
-        for crypto in SUPPORTED_CRYPTO:
-            self.last_price[crypto] = self.check_current_price(crypto)
+        self.last_price = self.check_current_price_for_all_supported_cryptos()
 
         # connect to room
         self.client = MatrixClient("http://matrix.org")
@@ -42,11 +43,19 @@ class ZmalauBot():
     def check_current_price(crypto_symbol):
         return json.load(request.urlopen("https://min-api.cryptocompare.com/"
                                          f"data/price?fsym={crypto_symbol}"
-                                         f"&tsyms={','.join(SUPPORTED_FIAT)}"))
+                                         f"&tsyms={','.join(SUPPORTED_FIAT)}"
+                                         ))
+                                        
+    @staticmethod
+    def check_current_price_for_all_supported_cryptos():
+        return json.load(request.urlopen("https://min-api.cryptocompare.com/"
+                                         f"data/pricemulti?fsyms={','.join(SUPPORTED_CRYPTO)}"
+                                         f"&tsyms={','.join(SUPPORTED_FIAT)}"
+                                         ))
 
     def on_message(self, room, event):
         if event['type'] == "m.room.message":
-            if username in event['sender']:
+            if USERNAME in event['sender']:
                 return
             if event['content']['msgtype'] == "m.text":
                 message = event['content']['body']
@@ -87,6 +96,6 @@ class ZmalauBot():
             self.room.send_text(status)
 
 
-zmalaubot = ZmalauBot(username, password, roomname)
+ZmalauBot(USERNAME, PASSWORD, ROOMNAME)
 while True:
     time.sleep(1)
