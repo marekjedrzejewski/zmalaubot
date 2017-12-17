@@ -28,6 +28,8 @@ class ZmalauBot():
         self.room.add_listener(self.on_message)
         self.client.start_listener_thread()
 
+        self.room.send_text('Dzień dobry')
+
     def default_response(self, message):
         return self.crypto.analyze_message_and_prepare_response(message)
 
