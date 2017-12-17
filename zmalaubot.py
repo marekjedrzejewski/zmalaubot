@@ -4,7 +4,7 @@
 import sys
 import time
 from matrix_client.client import MatrixClient
-from engines import CryptoEngine
+from engines import CryptoEngine, AirPollutionEngine
 
 if len(sys.argv) != 4:
     print("USAGE: ./zmalaubot.py username password room")
@@ -19,6 +19,7 @@ class ZmalauBot():
     def __init__(self, username, password, roomname):
         # connect to room
         self.crypto = CryptoEngine()
+        self.air_pollution = AirPollutionEngine()
         self.client = MatrixClient("http://matrix.org")
         self.token = self.client.login_with_password(username=username,
                                                      password=password)
@@ -43,6 +44,8 @@ class ZmalauBot():
                 if 'zmalau' in m or 'urus' in m:
                     if any([word in m for word in self.crypto.trigger_words]):
                         response = self.crypto.analyze_message_and_prepare_response(m)
+                    elif any([word in m for word in self.air_pollution.trigger_words]):
+                        response = self.air_pollution.analyze_message_and_prepare_response(m)
                     else:
                         response = self.default_response(m)
                     self.room.send_text(response)

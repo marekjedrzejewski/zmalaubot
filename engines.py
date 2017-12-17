@@ -78,3 +78,32 @@ class CryptoEngine():
         for crypto in used_crypto:
             message += self.generate_crypto_status(crypto, used_fiat) + '\n\n'
         return message
+
+
+class AirPollutionEngine():
+    def __init__(self):
+        self.last_measurement = self.check_current_level()
+
+    @property
+    def trigger_words(self):
+        return ['smog']
+
+    @staticmethod
+    def check_current_level():
+        return json.load(request.urlopen('https://api.waqi.info/feed/geo:50.314031;18.474689/?token=ee2c6a8c1b0244a4164e153b26df9f0a591cbb30'))['data']['iaqi']
+
+    def analyze_message_and_prepare_response(self, message):
+        last_pm10 = self.last_measurement['pm10']['v']
+        last_pm25 = self.last_measurement['pm25']['v']
+        current_measurement = self.check_current_level()
+        current_pm10 = current_measurement['pm10']['v']
+        current_pm25 = current_measurement['pm25']['v']
+        if (max(current_pm25, current_pm10) < max(last_pm25, last_pm10)):
+            status = 'smog zmalau.'
+        elif (max(current_pm25, current_pm10) > max(last_pm25, last_pm10)):
+            status = 'smog urus.'
+        else:
+            status = 'smog stoi.'
+        status += f'\nPM10: {current_pm10}, PM2.5: {current_pm25}'
+        self.last_measurement = current_measurement
+        return status
