@@ -1,15 +1,19 @@
 from urllib import request
 import json
+import pickle
+import os.path
 
 SUPPORTED_FIAT = ['USD', 'EUR', 'PLN']
 DEFAULT_FIAT = 'USD'
-SUPPORTED_CRYPTO = ['BTC', 'ETH', 'LTC', 'IOT', 'DOGE', 'BCH',
+SUPPORTED_CRYPTO = ['BTC', 'ETH', 'LTC', 'DOGE', 'BCH',
                     'XRP', 'DASH', 'XMR', 'EOS', 'NEO', 'OMG',
-                    'LSK', 'ZEC', 'NXT', 'ARDR', 'GNT']
+                    'LSK', 'ZEC', 'NXT', 'ARDR', 'GNT', 'ALGO']
 DEFAULT_CRYPTO = 'BTC'
 ALL_KEYWORD = 'raport'
 TRIGGER_WORDS = SUPPORTED_FIAT + SUPPORTED_CRYPTO
 TRIGGER_WORDS = [word.lower() for word in TRIGGER_WORDS] + [ALL_KEYWORD]
+FILE_NAME_PRICES = 'prices.pkl'
+FILE_NAME_POLLUTION = 'pollution.pkl'
 
 
 class CryptoEngine():
@@ -17,7 +21,13 @@ class CryptoEngine():
         # init all cryptos on start
         # TODO? wypierdolić?
         self.last_price = {}
-        self.last_price = self.check_current_price_for_all_supported_cryptos()
+        if os.path.isfile(FILE_NAME_PRICES):
+            with open(FILE_NAME_PRICES, 'rb') as fp:
+                self.last_price = pickle.load(fp)
+        else:
+            self.last_price = self.check_current_price_for_all_supported_cryptos()
+            with open(FILE_NAME_PRICES, 'wb') as fp:
+                pickle.dump(self.last_price, fp)
 
     @property
     def trigger_words(self):
@@ -77,12 +87,21 @@ class CryptoEngine():
         message = ''
         for crypto in used_crypto:
             message += self.generate_crypto_status(crypto, used_fiat) + '\n\n'
+
+        with open(FILE_NAME_PRICES, 'wb') as fp:
+            pickle.dump(self.last_price, fp)
         return message
 
 
 class AirPollutionEngine():
     def __init__(self):
-        self.last_measurement = self.check_current_level()
+        if os.path.isfile(FILE_NAME_POLLUTION):
+            with open(FILE_NAME_POLLUTION, 'rb') as fp:
+                self.last_measurement = pickle.load(fp)
+        else:
+            self.last_measurement = self.check_current_level()
+            with open(FILE_NAME_POLLUTION, 'wb') as fp:
+                pickle.dump(self.last_measurement, fp)
 
     @property
     def trigger_words(self):
@@ -90,7 +109,7 @@ class AirPollutionEngine():
 
     @staticmethod
     def check_current_level():
-        return json.load(request.urlopen('https://api.waqi.info/feed/geo:50.314031;18.474689/?token=ee2c6a8c1b0244a4164e153b26df9f0a591cbb30'))['data']['iaqi']
+        return json.load(request.urlopen('https://api.waqi.info/feed/poland/slaski/katowice--ul-kossutha-6/?token=ee2c6a8c1b0244a4164e153b26df9f0a591cbb30'))['data']['iaqi']
 
     def analyze_message_and_prepare_response(self, message):
         last_pm10 = self.last_measurement['pm10']['v']
@@ -98,12 +117,15 @@ class AirPollutionEngine():
         current_measurement = self.check_current_level()
         current_pm10 = current_measurement['pm10']['v']
         current_pm25 = current_measurement['pm25']['v']
-        if (max(current_pm25, current_pm10) < max(last_pm25, last_pm10)):
+        if current_pm25 < last_pm25:
             status = 'smog zmalau.'
-        elif (max(current_pm25, current_pm10) > max(last_pm25, last_pm10)):
+        elif current_pm25 > last_pm25:
             status = 'smog urus.'
         else:
             status = 'smog stoi.'
-        status += f'\nPM10: {current_pm10}, PM2.5: {current_pm25}'
+        status += f'\nPM2.5: {current_pm25}'
+        status += f'\nPM10: {current_pm10}'
         self.last_measurement = current_measurement
+        with open(FILE_NAME_POLLUTION, 'wb') as fp:
+            pickle.dump(self.last_measurement, fp)
         return status
